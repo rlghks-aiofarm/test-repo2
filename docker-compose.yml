@@ -1,0 +1,13 @@
+version: '3'
+
+services:
+  app2:
+    build: .
+    ports:
+      - '8082:8080'
+    networks:
+      - shared-network
+
+networks:
+  shared-network:
+    external: true
