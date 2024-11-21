@@ -39,6 +39,7 @@ jobs:
 
       - name: Build and Push Docker Image
         run: |
+          # Ensure the Dockerfile is in the root of the repository
           docker build -t ${{ secrets.DOCKER_USERNAME }}/test-repo2:latest .
           docker push ${{ secrets.DOCKER_USERNAME }}/test-repo2:latest
 
