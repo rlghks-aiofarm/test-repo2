@@ -1,7 +1,7 @@
 name: PR Integration Test for Repo2
 
 on:
-  pull_request:
+  push:
     branches:
       - main
 
