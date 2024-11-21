@@ -1,7 +1,15 @@
+# Base image
 FROM python:3.9-slim
 
-WORKDIR /
-COPY . /
-RUN pip install -r requirements.txt
+# Set work directory
+WORKDIR /app
 
+# Copy app code
+COPY . /app
+
+# Install dependencies
+RUN pip install --no-cache-dir -r requirements.txt
+
+# Expose port and run app
+EXPOSE 5001
 CMD ["python", "app.py"]
