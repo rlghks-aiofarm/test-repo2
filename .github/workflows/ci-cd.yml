@@ -39,8 +39,7 @@ jobs:
 
       - name: Build and Push Docker Image
         run: |
-          # Ensure the Dockerfile is in the root of the repository
-          docker buildx build -t ${{ secrets.DOCKER_USERNAME }}/test-repo2:latest -f ../Dockerfile .
+          docker build -t ${{ secrets.DOCKER_USERNAME }}/test-repo2:latest -f ../Dockerfile .
           docker push ${{ secrets.DOCKER_USERNAME }}/test-repo2:latest
 
       # # Deploy to Kubernetes
