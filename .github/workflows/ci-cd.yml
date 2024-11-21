@@ -39,7 +39,7 @@ jobs:
 
       - name: Build and Push Docker Image
         run: |
-          docker build -t ${{ secrets.DOCKER_USERNAME }}/test-repo2:latest -f ../Dockerfile .
+          docker buildx build -t ${{ secrets.DOCKER_USERNAME }}/test-repo2:latest -f ../Dockerfile
           docker push ${{ secrets.DOCKER_USERNAME }}/test-repo2:latest
 
       # # Deploy to Kubernetes
