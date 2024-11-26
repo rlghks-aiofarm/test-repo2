@@ -1,2 +1,2 @@
 def calculate(input_value):
-    return input_value * 4
+    return input_value * 3
