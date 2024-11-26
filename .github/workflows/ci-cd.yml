@@ -60,7 +60,7 @@ jobs:
         id: fetch_run_id
         run: |
           # Sleep to wait for Kube-Test initialization
-          sleep 5
+          sleep 10
 
           response=$(curl -H "Authorization: token ${{ secrets.KUBE_TEST_TOKEN }}" \
           https://api.github.com/repos/rlghks-aiofarm/kube-test/actions/runs)
@@ -104,7 +104,7 @@ jobs:
 
           status="queued"
           conclusion="null"
-          sleep_time=15  
+          sleep_time=30  
 
           while [[ "$status" == "queued" || "$status" == "in_progress" ]]; do
             response=$(curl -H "Authorization: token ${{ secrets.KUBE_TEST_TOKEN }}" \
