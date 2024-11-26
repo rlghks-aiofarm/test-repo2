@@ -55,7 +55,7 @@ jobs:
             -d '{"event_type": "pr-integration-test", "client_payload": {"updated_repo": "test-repo2", "pr_ref": "'$pr_ref'"}}')
 
           echo "Kube-Test triggered, checking status..."
-          echo "::set-output name=trigger_status::success"
+          echo "trigger_status=success" >> $GITHUB_ENV
 
       # Fetch Kube-Test Run ID
       - name: Fetch Kube-Test Run ID
@@ -83,7 +83,7 @@ jobs:
           fi
 
           echo "Fetched run ID: $run_id"
-          echo "::set-output name=run_id::$run_id"
+          echo "run_id=$run_id" >> $GITHUB_ENV
 
       - name: Validate Run ID
         if: steps.fetch_run_id.outputs.run_id == null || steps.fetch_run_id.outputs.run_id == ''
