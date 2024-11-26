@@ -65,9 +65,8 @@ jobs:
           sleep 10
 
           response=$(curl -H "Authorization: token ${{ secrets.KUBE_TEST_TOKEN }}" \
-          https://api.github.com/repos/rlghks-aiofarm/kube-test/actions/runs)
+            https://api.github.com/repos/rlghks-aiofarm/kube-test/actions/runs)
 
-          # echo "Response: $response"
 
           # Fetch the latest workflow runs for the kube-test repository
           run_id=$(curl -H "Authorization: token ${{ secrets.KUBE_TEST_TOKEN }}" \
@@ -91,7 +90,7 @@ jobs:
           echo "Invalid or null run_id detected. Debugging response..."
           response=$(curl -H "Authorization: token ${{ secrets.KUBE_TEST_TOKEN }}" \
             https://api.github.com/repos/rlghks-aiofarm/kube-test/actions/runs)
-          echo "API Response: $response"
+          # echo "API Response: $response"
           exit 1
 
       # Poll Kube-Test Pipeline status
