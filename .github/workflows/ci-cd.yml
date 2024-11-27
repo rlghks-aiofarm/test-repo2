@@ -42,102 +42,126 @@ jobs:
           docker build -t ${{ secrets.DOCKER_USERNAME }}/test-repo2:latest .
           docker push ${{ secrets.DOCKER_USERNAME }}/test-repo2:latest
 
-      # Trigger Kube-Test Pipeline
-      - name: Trigger Kube-Test Pipeline
-        id: kube_test_trigger
+        # Trigger Local Jenkins Pipeline
+      - name: Trigger Jenkins Pipeline
         run: |
           pr_ref="${{ github.head_ref }}"  # PR의 head ref 가져오기
 
-          response=$(curl -X POST \
-            -H "Authorization: token ${{ secrets.KUBE_TEST_TOKEN }}" \
-            -H "Accept: application/vnd.github.everest-preview+json" \
-            https://api.github.com/repos/rlghks-aiofarm/kube-test/dispatches \
-            -d '{"event_type": "pr-integration-test", "client_payload": {"updated_repo": "test-repo2", "pr_ref": "'$pr_ref'"}}')
+          # 로컬 Jenkins 서버의 IP와 URL을 사용하여 Jenkins 웹훅 호출
+          curl -X POST http://<jenkins-server-ip>:8080/job/test-repo2-pipeline/buildWithParameters \
+            --data "PR_REF=$pr_ref" \
+            --user ${{ secrets.JENKINS_USERNAME }}:${{ secrets.JENKINS_API_TOKEN }}
 
-          echo "Kube-Test triggered, checking status..."
-          echo "trigger_status=success" >> $GITHUB_ENV
-
-      # Fetch Kube-Test Run ID
-      - name: Fetch Kube-Test Run ID
-        id: fetch_run_id
+      # Fetch Jenkins Build Status (optional)
+      - name: Wait for Jenkins Build to Complete
         run: |
-          # Sleep to wait for Kube-Test initialization
-          sleep 10
+          # Jenkins 빌드 상태 확인 (필요에 따라 추가)
+          sleep 30
+          response=$(curl -s http://<jenkins-server-ip>:8080/job/test-repo2-pipeline/lastBuild/api/json)
+          build_status=$(echo $response | jq -r '.result')
 
-          response=$(curl -H "Authorization: token ${{ secrets.KUBE_TEST_TOKEN }}" \
-            https://api.github.com/repos/rlghks-aiofarm/kube-test/actions/runs)
-
-
-          # Fetch the latest workflow runs for the kube-test repository
-          run_id=$(curl -H "Authorization: token ${{ secrets.KUBE_TEST_TOKEN }}" \
-            https://api.github.com/repos/rlghks-aiofarm/kube-test/actions/runs \
-            | jq -r '.workflow_runs | map(select(.status == "queued" or .status == "in_progress")) | sort_by(.created_at) | reverse | .[0].id')
-
-          echo "Extracted run_id: $run_id"  # 추출된 run_id 확인
-
-          # Exit if no run_id is found
-          if [ -z "$run_id" ] || [ "$run_id" == "null" ]; then
-            echo "Failed to retrieve run_id for kube-test."
+          if [[ "$build_status" == "SUCCESS" ]]; then
+            echo "Jenkins Build completed successfully."
+          else
+            echo "Jenkins Build failed."
             exit 1
           fi
 
-          echo "Fetched run ID: $run_id"
-          echo "run_id=$run_id" >> $GITHUB_ENV
+      # # Trigger Kube-Test Pipeline
+      # - name: Trigger Kube-Test Pipeline
+      #   id: kube_test_trigger
+      #   run: |
+      #     pr_ref="${{ github.head_ref }}"  # PR의 head ref 가져오기
 
-      - name: Validate Run ID
-        if: steps.fetch_run_id.outputs.run_id == null || steps.fetch_run_id.outputs.run_id == ''
-        run: |
-          echo "Invalid or null run_id detected. Debugging response..."
-          response=$(curl -H "Authorization: token ${{ secrets.KUBE_TEST_TOKEN }}" \
-            https://api.github.com/repos/rlghks-aiofarm/kube-test/actions/runs)
-          # echo "API Response: $response"
-          exit 1
+      #     response=$(curl -X POST \
+      #       -H "Authorization: token ${{ secrets.KUBE_TEST_TOKEN }}" \
+      #       -H "Accept: application/vnd.github.everest-preview+json" \
+      #       https://api.github.com/repos/rlghks-aiofarm/kube-test/dispatches \
+      #       -d '{"event_type": "pr-integration-test", "client_payload": {"updated_repo": "test-repo2", "pr_ref": "'$pr_ref'"}}')
 
-      # Poll Kube-Test Pipeline status
-      - name: Wait for Kube-Test to Complete
-        run: |
-          run_id=${{ steps.fetch_run_id.outputs.run_id }}
-          if [ -z "$run_id" ] || [ "$run_id" == "null" ]; then
-            echo "Invalid run_id. Exiting."
-            response=$(curl -H "Authorization: token ${{ secrets.KUBE_TEST_TOKEN }}" \
-              https://api.github.com/repos/rlghks-aiofarm/kube-test/actions/runs)
-            echo "API Response: $response"
-            exit 1
-          fi
+      #     echo "Kube-Test triggered, checking status..."
+      #     echo "trigger_status=success" >> $GITHUB_ENV
 
-          status="queued"
-          conclusion="null"
-          sleep_time=30  
+      # # Fetch Kube-Test Run ID
+      # - name: Fetch Kube-Test Run ID
+      #   id: fetch_run_id
+      #   run: |
+      #     # Sleep to wait for Kube-Test initialization
+      #     sleep 10
 
-          while [[ "$status" == "queued" || "$status" == "in_progress" ]]; do
-            response=$(curl -H "Authorization: token ${{ secrets.KUBE_TEST_TOKEN }}" \
-              https://api.github.com/repos/rlghks-aiofarm/kube-test/actions/runs/$run_id)
-            echo "Current API Response: $response"
+      #     response=$(curl -H "Authorization: token ${{ secrets.KUBE_TEST_TOKEN }}" \
+      #       https://api.github.com/repos/rlghks-aiofarm/kube-test/actions/runs)
 
-            status=$(echo "$response" | jq -r '.status')
-            conclusion=$(echo "$response" | jq -r '.conclusion')
+      #     # Fetch the latest workflow runs for the kube-test repository
+      #     run_id=$(curl -H "Authorization: token ${{ secrets.KUBE_TEST_TOKEN }}" \
+      #       https://api.github.com/repos/rlghks-aiofarm/kube-test/actions/runs \
+      #       | jq -r '.workflow_runs | map(select(.status == "queued" or .status == "in_progress")) | sort_by(.created_at) | reverse | .[0].id')
 
-            echo "Current status: $status, Conclusion: $conclusion"
+      #     echo "Extracted run_id: $run_id"  # 추출된 run_id 확인
 
-            if [[ "$conclusion" == "success" ]]; then
-              echo "Kube-Test passed successfully."
-              exit 0
-            elif [[ "$conclusion" == "failure" ]]; then
-              echo "Kube-Test failed."
-              echo "API Response: $response"
-              exit 1
-            fi
+      #     # Exit if no run_id is found
+      #     if [ -z "$run_id" ] || [ "$run_id" == "null" ]; then
+      #       echo "Failed to retrieve run_id for kube-test."
+      #       exit 1
+      #     fi
 
-            echo "Kube-Test is still running. Waiting for $sleep_time seconds before retrying..."
-            sleep $sleep_time
-          done
+      #     echo "Fetched run ID: $run_id"
+      #     echo "run_id=$run_id" >> $GITHUB_ENV
 
-      - name: Final Debugging
-        run: |
-          echo "Final debugging before exiting."
-          response=$(curl -H "Authorization: token ${{ secrets.KUBE_TEST_TOKEN }}" \
-            https://api.github.com/repos/rlghks-aiofarm/kube-test/actions/runs/$run_id)
-          echo "Final API Response: $response"
+      # - name: Validate Run ID
+      #   if: steps.fetch_run_id.outputs.run_id == null || steps.fetch_run_id.outputs.run_id == ''
+      #   run: |
+      #     echo "Invalid or null run_id detected. Debugging response..."
+      #     response=$(curl -H "Authorization: token ${{ secrets.KUBE_TEST_TOKEN }}" \
+      #       https://api.github.com/repos/rlghks-aiofarm/kube-test/actions/runs)
+      #     # echo "API Response: $response"
+      #     exit 1
+
+      # # Poll Kube-Test Pipeline status
+      # - name: Wait for Kube-Test to Complete
+      #   run: |
+      #     run_id=${{ steps.fetch_run_id.outputs.run_id }}
+      #     if [ -z "$run_id" ] || [ "$run_id" == "null" ]; then
+      #       echo "Invalid run_id. Exiting."
+      #       response=$(curl -H "Authorization: token ${{ secrets.KUBE_TEST_TOKEN }}" \
+      #         https://api.github.com/repos/rlghks-aiofarm/kube-test/actions/runs)
+      #       echo "API Response: $response"
+      #       exit 1
+      #     fi
+
+      #     status="queued"
+      #     conclusion="null"
+      #     sleep_time=30
+
+      #     while [[ "$status" == "queued" || "$status" == "in_progress" ]]; do
+      #       response=$(curl -H "Authorization: token ${{ secrets.KUBE_TEST_TOKEN }}" \
+      #         https://api.github.com/repos/rlghks-aiofarm/kube-test/actions/runs/$run_id)
+      #       echo "Current API Response: $response"
+
+      #       status=$(echo "$response" | jq -r '.status')
+      #       conclusion=$(echo "$response" | jq -r '.conclusion')
+
+      #       echo "Current status: $status, Conclusion: $conclusion"
+
+      #       if [[ "$conclusion" == "success" ]]; then
+      #         echo "Kube-Test passed successfully."
+      #         exit 0
+      #       elif [[ "$conclusion" == "failure" ]]; then
+      #         echo "Kube-Test failed."
+      #         echo "API Response: $response"
+      #         exit 1
+      #       fi
+
+      #       echo "Kube-Test is still running. Waiting for $sleep_time seconds before retrying..."
+      #       sleep $sleep_time
+      #     done
+
+      # - name: Final Debugging
+      #   run: |
+      #     echo "Final debugging before exiting."
+      #     response=$(curl -H "Authorization: token ${{ secrets.KUBE_TEST_TOKEN }}" \
+      #       https://api.github.com/repos/rlghks-aiofarm/kube-test/actions/runs/$run_id)
+      #     echo "Final API Response: $response"
 
       # # Deploy to Kubernetes
       # - name: Set up kubectl
