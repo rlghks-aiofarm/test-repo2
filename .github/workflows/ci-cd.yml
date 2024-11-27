@@ -48,7 +48,7 @@ jobs:
           pr_ref="${{ github.head_ref }}"  # PR의 head ref 가져오기
 
           # 로컬 Jenkins 서버의 IP와 URL을 사용하여 Jenkins 웹훅 호출
-          curl -X POST http://http://172.24.240.1:8080/job/test-repo2-pipeline/buildWithParameters \
+          curl -X POST http://172.24.240.1:8080/job/test-repo2-pipeline/buildWithParameters \
             --data "PR_REF=$pr_ref" \
             --user ${{ secrets.JENKINS_USERNAME }}:${{ secrets.JENKINS_API_TOKEN }}
 
@@ -57,7 +57,7 @@ jobs:
         run: |
           # Jenkins 빌드 상태 확인 (필요에 따라 추가)
           sleep 30
-          response=$(curl -s http://http://172.24.240.1:8080/job/test-repo2-pipeline/lastBuild/api/json)
+          response=$(curl -s http://172.24.240.1:8080/job/test-repo2-pipeline/lastBuild/api/json)
           build_status=$(echo $response | jq -r '.result')
 
           if [[ "$build_status" == "SUCCESS" ]]; then
